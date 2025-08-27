@@ -1,3 +1,4 @@
+// src/api.js
 import axios from "axios";
 
 // Base API instance
@@ -30,6 +31,7 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         console.error("Refresh token failed:", refreshErr);
         localStorage.removeItem("accessToken");
+        alert("Session expired! Please login again.");
         window.location.href = "/login";
       }
     }
