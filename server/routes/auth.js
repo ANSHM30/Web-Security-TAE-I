@@ -14,19 +14,37 @@ function hashToken(token) {
 // ======================== REGISTER ========================
 router.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password)
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
       return res.status(400).json({ message: 'Missing fields' });
+    }
+
+    // check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, passwordHash });
 
-    res.json({ id: user._id, email: user.email });
+    const user = await User.create({
+      name,
+      email,
+      passwordHash,
+    });
+
+    res.status(201).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      joined: user.joined,
+    });
   } catch (err) {
-    console.error(err);
+    console.error("Register error:", err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // ======================== LOGIN ========================
 router.post('/login', async (req, res) => {

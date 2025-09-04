@@ -6,6 +6,7 @@ const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
 const protectedRoutes = require("./routes/protected");
+const profileRoutes = require("./routes/profile");
 const { verifyAccessToken } = require("./utils/jwt"); // ✅ import verifyAccessToken
 
 const app = express();
@@ -13,6 +14,7 @@ const app = express();
 // ✅ Middleware
 app.use(express.json());
 app.use(cookieParser());
+
 
 // ✅ Allow frontend (React) to talk to backend
 app.use(
@@ -25,6 +27,8 @@ app.use(
 // ✅ Routes
 app.use("/auth", authRoutes);
 app.use("/api", protectedRoutes);
+app.use("/api", profileRoutes);
+
 
 // ✅ Direct protected test route
 app.get("/api/protected", (req, res) => {
