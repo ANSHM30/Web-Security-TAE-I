@@ -19,7 +19,7 @@ app.use(cookieParser());
 // ✅ Allow frontend (React) to talk to backend
 app.use(
   cors({
-    origin: "http://localhost:3001", // change if frontend runs elsewhere
+    origin: ["http://localhost:3000", "http://localhost:3001"], // allow common React dev ports
     credentials: true, // allow cookies if you’re using JWT in cookies
   })
 );

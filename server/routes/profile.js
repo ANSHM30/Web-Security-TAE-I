@@ -1,23 +1,23 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // adjust path if needed
+const User = require("../models/User");
+const auth = require("../middleware/auth");
 const router = express.Router();
 
-router.get("/profile", async (req, res) => {
+// Use auth middleware to verify access token from Authorization header or cookie
+router.get("/profile", auth, async (req, res) => {
   try {
-    const token = req.cookies.token; // ✅ token should be in cookie
-    if (!token) return res.status(401).json({ message: "No token" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // ✅ fetch user from DB
-    const user = await User.findById(decoded.id).select("-password"); // exclude password
+    const user = await User.findById(req.user.id).select("name email joined");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(user);
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      joined: user.joined,
+    });
   } catch (err) {
     console.error("Profile error:", err.message);
-    res.status(401).json({ message: "Invalid or expired token" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
