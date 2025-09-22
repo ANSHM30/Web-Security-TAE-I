@@ -71,9 +71,20 @@ function App() {
         />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
-
-      {/* Toast notifications */}
-      <ToastContainer position="top-right" autoClose={3000} />
+    <>
+      {/* your routes/components */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+    </>
     </BrowserRouter>
   );
 }

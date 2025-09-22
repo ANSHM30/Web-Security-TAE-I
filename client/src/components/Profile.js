@@ -1,51 +1,52 @@
 import React, { useEffect, useState } from "react";
 import api from "../api";
 import { jwtDecode } from "jwt-decode";
-// Access token will be fetched from backend via /auth/refresh
 
 function Profile() {
-  const [profile, setProfile] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [timeLeft, setTimeLeft] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch user data like in Dashboard
+  const fetchUserData = async () => {
+    try {
+      const res = await api.get("/auth/me", { withCredentials: true });
+      setUserData(res.data);
+      setLoading(false);
+
+      // Capture token for display
+      const token = localStorage.getItem("accessToken") || "";
+      setAccessToken(token);
+    } catch (err) {
+      console.error("Error fetching user data:", err);
+      setError("⚠️ Please login first to view your profile.");
+      setLoading(false);
+    }
+  };
+
+  // Fetch fresh access token and then user data
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-        const res = await api.get("/api/profile", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }); // ✅ secure API call
-        setProfile(res.data?.user || res.data);
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-
-        if (err.response?.status === 401) {
-          setError("⚠️ Please login first to view your profile.");
-        } else {
-          setError(err.response?.data?.message || "Something went wrong. Try again later.");
-        }
-      }
-    };
-
-    // Fetch a fresh access token from backend (uses refresh token cookie)
     api
-      .post("/auth/refresh")
+      .post("/auth/refresh", {}, { withCredentials: true })
       .then((res) => {
         const token = res.data?.accessToken || "";
-        setAccessToken(token);
         if (token) {
           localStorage.setItem("accessToken", token);
+          setAccessToken(token);
         }
       })
-      .catch(() => setAccessToken(""))
+      .catch(() => {
+        setAccessToken("");
+      })
       .finally(() => {
-        fetchProfile();
+        fetchUserData();
       });
   }, []);
 
-  // Compute and display countdown to access token expiry
+  // Countdown to token expiry
   useEffect(() => {
     function computeTimeLeft(token) {
       try {
@@ -57,7 +58,6 @@ function Profile() {
       }
     }
 
-    // Initialize from current token (state or localStorage fallback)
     const initialToken = accessToken || localStorage.getItem("accessToken");
     setTimeLeft(initialToken ? computeTimeLeft(initialToken) : null);
 
@@ -73,15 +73,14 @@ function Profile() {
     return () => clearInterval(interval);
   }, [accessToken]);
 
-  // Proactively refresh token a few seconds before expiry (no page reload)
+  // Auto-refresh token if it’s about to expire
   useEffect(() => {
     if (timeLeft === null) return;
     if (timeLeft > 5) return; // refresh when <= 5s left
     if (refreshing) return;
 
     setRefreshing(true);
-    api
-      .post("/auth/refresh")
+    api.post("/auth/refresh", {}, { withCredentials: true })
       .then((res) => {
         const token = res.data?.accessToken || "";
         if (token) {
@@ -90,10 +89,20 @@ function Profile() {
         }
       })
       .catch(() => {
-        // do nothing here; next protected call will redirect via interceptor
+        console.warn("Failed to refresh token");
       })
       .finally(() => setRefreshing(false));
   }, [timeLeft, refreshing]);
+
+  // --- UI ---
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <p className="text-gray-500">Loading profile...</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -111,22 +120,12 @@ function Profile() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-gray-500">Loading profile...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0c1427] via-[#101a34] to-[#0c1427]">
       <div className="max-w-4xl mx-auto px-4 py-10">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
-            <h2 className="text-3xl font-bold text-white">
-              Your Profile
-            </h2>
+            <h2 className="text-3xl font-bold text-white">Your Profile</h2>
             <p className="text-indigo-100 mt-2">Manage your account information</p>
           </div>
 
@@ -139,30 +138,30 @@ function Profile() {
                   Account Details
                 </h3>
                 <div className="space-y-4">
-                  {(profile.id || profile._id) && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">User ID</label>
-                      <p className="text-gray-900 font-mono text-sm break-all">{profile.id || profile._id}</p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">User ID</label>
+                    <p className="text-gray-900 font-mono text-sm break-all">{userData.user?.id || "-"}</p>
+                  </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Username</label>
-                    <p className="text-gray-900 font-medium">{profile.name || "-"}</p>
+                    <p className="text-gray-900 font-medium">{userData.user?.username || "-"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Email Address</label>
-                    <p className="text-gray-900 font-medium">{profile.email}</p>
+                    <p className="text-gray-900 font-medium">{userData.user?.email || "-"}</p>
                   </div>
-                  {(profile.joined || profile.joinedAt || profile.createdAt) && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Member Since</label>
-                      <p className="text-gray-900">{new Date(profile.joined || profile.joinedAt || profile.createdAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}</p>
-                    </div>
-                  )}
+                  <div>
+
+                    <p className="text-gray-900">
+                      {userData.user?.createdAt
+                        ? new Date(userData.user.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : "-"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -176,7 +175,15 @@ function Profile() {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Token Status</label>
                     <div className="flex items-center mt-1">
-                      <div className={`w-3 h-3 rounded-full mr-2 ${timeLeft !== null && timeLeft > 10 ? 'bg-green-500' : timeLeft !== null && timeLeft > 0 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                      <div
+                        className={`w-3 h-3 rounded-full mr-2 ${
+                          timeLeft !== null && timeLeft > 10
+                            ? "bg-green-500"
+                            : timeLeft !== null && timeLeft > 0
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                        }`}
+                      ></div>
                       <span className="text-gray-900 font-medium">
                         {timeLeft !== null ? `${timeLeft}s remaining` : "Not available"}
                       </span>

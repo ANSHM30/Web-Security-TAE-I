@@ -1,5 +1,6 @@
 // src/api.js
 import axios from "axios";
+import { toast } from "react-toastify";
 
 // Base API instance
 const api = axios.create({
@@ -27,11 +28,12 @@ api.interceptors.response.use(
         const res = await api.post("/auth/refresh");
         localStorage.setItem("accessToken", res.data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
+        toast.success("Access token refreshed");
         return api(originalRequest);
       } catch (refreshErr) {
         console.error("Refresh token failed:", refreshErr);
-        localStorage.removeItem("accessToken");
-        alert("Session expired! Please login again.");
+        // keep the (possibly expired) token to respect your requirement not to remove it
+        toast.error("Session expired! Please login again.");
         window.location.href = "/login";
       }
     }

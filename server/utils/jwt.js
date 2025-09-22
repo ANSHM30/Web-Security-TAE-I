@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 // --- Sign Access Token (short-lived: 60s for demo) ---
 function signAccessToken(payload) {
   return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: '60s',
+    expiresIn: '3m',
   });
 }
 
